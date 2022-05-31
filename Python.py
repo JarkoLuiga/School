@@ -1,22 +1,59 @@
-def konsooli_print(tulemus): # funktsiooni deklaratsioon
-    if tulemus < 20:
-        for _ in range(tulemus): # nii mitu korda kui on tulemus prindin tulemust
-            print("Tere!")
+import psutil
+import shutil
+import os
+import requests
+from datetime import datetime
 
-file1 = open("A.txt", "r") # avan esimese faili file1 = muutuja, funktsioon = open("A.txt", "r")
-file2 = open("B.txt", "r") # avan teise faili
-muutuja1 = int(file1.read()) # loen faili read funktsiooni kasutades loen faili ning muudan selle intiks
-muutuja2 = int(file2.read()) # loen faili, see on argument (file2.read())
-tulemus = muutuja1 + muutuja2 # muutuja väärtustamine
+def to_gb(n):
+    return n / (1024 ** 3)
 
-if tulemus > 1000000:
-    tulemusfile = open("miljon2r.txt", "w") # loon uue faili
-else:
-    tulemusfile = open("tulemus.txt", "w") # loon uue faili
+def to_gb_round(n):
+    return round(n / (1024 ** 3))
 
-tulemusfile.write(str(tulemus)) # kirjutan tulemuse stringina, kirjutan selle write funktsiooni abil
+def percent(n, pct):
+    return (n / 100) * pct
 
-konsooli_print(tulemus) # kutsun funktsiooni 
+warn = 20 # hoiatusteave protsent
 
-file1.close() # sulgen faili
-file2.close() # sulgen faili
+working_dir = os.getcwd()
+
+logfile = open("log.txt", "w")
+
+date = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+logfile.write("Programmi kaivitamise aeg: {} \n".format(date))
+
+free_memory = psutil.virtual_memory().percent
+print("Vaba malu on {}% ja kokku on {} GB.".format(
+    free_memory, to_gb_round(psutil.virtual_memory().total)
+))
+
+logfile.write("Vaba malu protsent: {}% \n".format(free_memory))
+
+total_space = to_gb_round(shutil.disk_usage(working_dir).total)
+free_space = to_gb_round(shutil.disk_usage(working_dir).free)
+print("Vaba salvestusruumi on {} GB ja kokku on salvestusruumi {} GB.".format(
+    free_space, total_space
+))
+
+free_space_percent = round((shutil.disk_usage(working_dir).free / shutil.disk_usage(working_dir).total) * 100, 1)
+logfile.write("Vaba salvestusruumi protsent: {}% \n".format(free_space_percent))
+
+if free_memory > warn:
+    text = "Vaba malu on ule {}%.".format(warn)
+    print(text)
+    logfile.write("{}\n".format(text))
+
+if to_gb(shutil.disk_usage(working_dir).free) > percent(to_gb(shutil.disk_usage(working_dir).total), warn):
+    text = "Salvestusruum on ule {}%.".format(warn)
+    print(text)
+    logfile.write("{}\n".format(text))
+
+json = requests.get("https://goweather.herokuapp.com/weather/tallinn").json()
+logfile.write("\n")
+logfile.write("Tallinna ilm:\n")
+logfile.write("Temperatuur: {}\n".format(json["temperature"]))
+logfile.write("Tuule kiirus: {}".format(json["wind"]))
+
+
+logfile.close()
